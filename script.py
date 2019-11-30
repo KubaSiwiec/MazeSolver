@@ -1,21 +1,7 @@
-# import zmq
-# import struct
-
-# ctx = zmq.Context()
-# req = ctx.socket(zmq.REQ)
-# req.connect('tcp://127.0.0.1:6574')
-
-# #send information about position and orientation, send structure (2 position bytes, x=0, y=1), orientation to north
-# req.send(b'W' + struct.pack('2B', 1, 1) + b'N')
-
-# #read walls as unpacking the server response
-# left, front, right = struct.unpack('3B', req.recv())
-# print(left, front, right)
-
-
 # import required libraries
 import struct
 import zmq
+import operator
 
 
 # establish the connection
@@ -39,7 +25,7 @@ def read_walls(pos_x, pos_y, orientation):
 
     # read walls as unpacking the server response
     left, front, right = struct.unpack("3B", req.recv())
-    return left, front, right
+    return {"left": left, "front": front, "right": right}
 
 
 def cell_position_to_number(pos_x, pos_y):
@@ -77,11 +63,13 @@ def orientation_to_direction(orientation, left, front, right):
 
 
 def write_cell_walls(pos_x, pos_y, orientation):
+    numbers[cell_position_to_number(pos_x, pos_y)] += 1
     if was_visited(pos_x, pos_y):
         pass
     else:
         cell_byte = 0x01  # starting from 1, because cell is being visited now
-        left, front, right = read_walls(pos_x, pos_y, orientation)
+        are_there_walls = read_walls(pos_x, pos_y, orientation)
+        left, front, right = are_there_walls.values()
         north, west, south, east = orientation_to_direction(
             orientation, left, front, right
         )
@@ -95,6 +83,7 @@ def write_cell_walls(pos_x, pos_y, orientation):
             cell_byte = cell_byte + 16
 
         walls[cell_position_to_number(pos_x, pos_y)] = cell_byte
+    # in brute force search numbers list should be used as mark how many times the cell was visited
 
 
 def orientation_to_byte(orientation):
@@ -110,6 +99,7 @@ def orientation_to_byte(orientation):
 
 
 def turn(orientation, turn_dir):
+    print("Turn dir: {}".format(turn_dir))
     if turn_dir == "right":
         print("is turning right")
         print(orientation)
@@ -125,7 +115,7 @@ def turn(orientation, turn_dir):
         else:
             return 4
     else:
-        pass
+        return orientation
 
 
 def move(pos_x, pos_y, orientation):
@@ -139,6 +129,92 @@ def move(pos_x, pos_y, orientation):
         pos_x = pos_x - 1
 
     return pos_x, pos_y
+
+
+def get_cell_weight(pos_x, pos_y, orientation):
+
+    # check if the robot is not on the border of the labirynth, and assign weights
+
+    # if north
+    if orientation == 1:
+        weight_on_left = (
+            numbers[cell_position_to_number(pos_x - 1, pos_y)] if pos_x != 0 else 100000
+        )
+        weight_on_front = (
+            numbers[cell_position_to_number(pos_x, pos_y + 1)]
+            if pos_y != 15
+            else 100000
+        )
+        weight_on_right = (
+            numbers[cell_position_to_number(pos_x + 1, pos_y)]
+            if pos_x != 15
+            else 100000
+        )
+
+    # if east
+    if orientation == 2:
+        weight_on_left = (
+            numbers[cell_position_to_number(pos_x, pos_y + 1)]
+            if pos_y != 15
+            else 100000
+        )
+        weight_on_front = (
+            numbers[cell_position_to_number(pos_x + 1, pos_y)]
+            if pos_x != 15
+            else 100000
+        )
+        weight_on_right = (
+            numbers[cell_position_to_number(pos_x, pos_y - 1)] if pos_y != 0 else 100000
+        )
+
+    # if south
+    if orientation == 3:
+        weight_on_left = (
+            numbers[cell_position_to_number(pos_x + 1, pos_y)]
+            if pos_x != 15
+            else 100000
+        )
+        weight_on_front = (
+            numbers[cell_position_to_number(pos_x, pos_y - 1)] if pos_y != 0 else 100000
+        )
+        weight_on_right = (
+            numbers[cell_position_to_number(pos_x - 1, pos_y)] if pos_x != 0 else 100000
+        )
+
+    # if west
+    if orientation == 4:
+        weight_on_left = (
+            numbers[cell_position_to_number(pos_x, pos_y + 1)]
+            if pos_y != 15
+            else 100000
+        )
+        weight_on_front = (
+            numbers[cell_position_to_number(pos_x, pos_y + 1)] if pos_x != 0 else 100000
+        )
+        weight_on_right = (
+            numbers[cell_position_to_number(pos_x + 1, pos_y)]
+            if pos_x != 15
+            else 100000
+        )
+
+    return {"left": weight_on_left, "front": weight_on_front, "right": weight_on_right}
+
+
+def choose_where_to_turn(orientation, weights, are_there_walls):
+    # if weight
+    # print(weights)
+    sorted_weights = sorted(weights.items(), key=operator.itemgetter(1))
+    # print(sorted_weights)
+    for key, value in sorted_weights:
+        # print(key)
+        print(key)
+        print(are_there_walls[key])
+        if are_there_walls[key] == 0:
+            print(key)
+            orient = turn(orientation, key)
+            print("Orientation after turning: {}".format(orient))
+            break
+    return orient
 
 
 def are_all_cells_visited():
@@ -171,7 +247,7 @@ def test_labirynth(orientation):
 
 # number informs about the distance of cpecific cell to the center
 # numbers[0] - SW, numbers[15] - NW, numbers[240] - SE, numbers[255] - NE
-numbers = list(range(256))
+numbers = [0] * 256
 
 # walls
 # 000NWSEP
@@ -191,16 +267,22 @@ update_state(pos_x, pos_y, orientation)
 k = 300
 while not are_all_cells_visited() and k != 0:
     write_cell_walls(pos_x, pos_y, orientation)
-    left, front, right = read_walls(pos_x, pos_y, orientation)
-    if right == 0:
-        orientation = turn(orientation, "right")
-    elif left == 0:
-        orientation = turn(orientation, "left")
-    elif front == 0:
-        pass
-    else:
-        orientation = turn(orientation, "left")
-        orientation = turn(orientation, "left")
+    are_there_walls = read_walls(pos_x, pos_y, orientation)
+
+    weights = get_cell_weight(pos_x, pos_y, orientation)
+
+    orientation = choose_where_to_turn(orientation, weights, are_there_walls)
+
+    # if right == 0:
+    #     orientation = turn(orientation, "right")
+
+    # elif left == 0:
+    #     orientation = turn(orientation, "left")
+    # elif front == 0:
+    #     pass
+    # else:
+    #     orientation = turn(orientation, "left")
+    #     orientation = turn(orientation, "left")
     update_state(pos_x, pos_y, orientation)
     print(pos_x, pos_y, orientation_to_byte(orientation), end=", after turning: ")
     pos_x, pos_y = move(pos_x, pos_y, orientation)
