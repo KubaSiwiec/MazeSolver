@@ -214,6 +214,10 @@ def choose_where_to_turn(orientation, weights, are_there_walls):
             orient = turn(orientation, key)
             print("Orientation after turning: {}".format(orient))
             break
+        else:
+            # go backwards
+            orient = turn(orientation, "left")
+            orient = turn(orient, "left")
     return orient
 
 
@@ -264,7 +268,7 @@ update_state(pos_x, pos_y, orientation)
 
 # test_labirynth(1)
 
-k = 300
+k = 3000
 while not are_all_cells_visited() and k != 0:
     write_cell_walls(pos_x, pos_y, orientation)
     are_there_walls = read_walls(pos_x, pos_y, orientation)
@@ -293,8 +297,8 @@ while not are_all_cells_visited() and k != 0:
     k = k - 1
 
 
-print(walls)
-
-
-# print(read_walls(2, 4, b"N"))
+if are_all_cells_visited:
+    print("The robot has visited the whole labirynth")
+else:
+    print("It is getting too long")
 
