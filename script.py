@@ -46,7 +46,7 @@ def orientation_to_direction(orientation, left, front, right):
         west = left
         north = front
         east = right
-    elif orientation == 2:
+    elif orientation == 4:
         west = front
         north = right
         south = left
@@ -54,7 +54,7 @@ def orientation_to_direction(orientation, left, front, right):
         west = right
         south = front
         east = left
-    elif orientation == 4:
+    elif orientation == 2:
         north = left
         east = front
         south = right
@@ -73,6 +73,9 @@ def write_cell_walls(pos_x, pos_y, orientation):
         north, west, south, east = orientation_to_direction(
             orientation, left, front, right
         )
+        print("Position: {}, {}, or {};".format(pos_x, pos_y, orientation), end="    ")
+        print("Left {}, front {}, right {};".format(left, front, right), end="    ")
+        print("north {}, west {}, south {}, east {}".format(north, west, south, east))
         if east:
             cell_byte = cell_byte + 2
         if south:
@@ -99,17 +102,14 @@ def orientation_to_byte(orientation):
 
 
 def turn(orientation, turn_dir):
-    print("Turn dir: {}".format(turn_dir))
     if turn_dir == "right":
         print("is turning right")
-        print(orientation)
         if orientation != 4:
-            print("New orientation: {}".format(orientation + 1))
             return orientation + 1
         else:
             return 1
     elif turn_dir == "left":
-        print("is turning right")
+        print("is turning left")
         if orientation != 1:
             return orientation - 1
         else:
@@ -201,18 +201,10 @@ def get_cell_weight(pos_x, pos_y, orientation):
 
 
 def choose_where_to_turn(orientation, weights, are_there_walls):
-    # if weight
-    # print(weights)
     sorted_weights = sorted(weights.items(), key=operator.itemgetter(1))
-    # print(sorted_weights)
     for key, value in sorted_weights:
-        # print(key)
-        print(key)
-        print(are_there_walls[key])
         if are_there_walls[key] == 0:
-            print(key)
             orient = turn(orientation, key)
-            print("Orientation after turning: {}".format(orient))
             break
         else:
             # go backwards
@@ -238,7 +230,6 @@ def update_state(pos_x, pos_y, orientation):
     state += b"F"
     state += struct.pack("256B", *walls)
     req.send(state)
-    # print("Request send with state: {}".format(state))
     req.recv()
 
 
@@ -268,36 +259,26 @@ update_state(pos_x, pos_y, orientation)
 
 # test_labirynth(1)
 
-k = 3000
-while not are_all_cells_visited() and k != 0:
+k = 0
+while not are_all_cells_visited() and k != 800:
+
     write_cell_walls(pos_x, pos_y, orientation)
+    update_state(pos_x, pos_y, orientation)
+
     are_there_walls = read_walls(pos_x, pos_y, orientation)
 
     weights = get_cell_weight(pos_x, pos_y, orientation)
 
     orientation = choose_where_to_turn(orientation, weights, are_there_walls)
+    # update_state(pos_x, pos_y, orientation)
 
-    # if right == 0:
-    #     orientation = turn(orientation, "right")
-
-    # elif left == 0:
-    #     orientation = turn(orientation, "left")
-    # elif front == 0:
-    #     pass
-    # else:
-    #     orientation = turn(orientation, "left")
-    #     orientation = turn(orientation, "left")
-    update_state(pos_x, pos_y, orientation)
-    print(pos_x, pos_y, orientation_to_byte(orientation), end=", after turning: ")
     pos_x, pos_y = move(pos_x, pos_y, orientation)
-    print(pos_x, pos_y, orientation_to_byte(orientation), end=", after moving: ")
     update_state(pos_x, pos_y, orientation)
-    print(pos_x, pos_y, orientation_to_byte(orientation), end=",  Walls: ")
-    print(read_walls(pos_x, pos_y, orientation))
-    k = k - 1
+    k = k + 1
+    print(k)
 
 
-if are_all_cells_visited:
+if are_all_cells_visited():
     print("The robot has visited the whole labirynth")
 else:
     print("It is getting too long")
