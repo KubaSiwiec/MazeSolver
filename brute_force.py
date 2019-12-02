@@ -81,9 +81,9 @@ def write_cell_walls(pos_x, pos_y, orientation):
         north, west, south, east = orientation_to_direction(
             orientation, left, front, right
         )
-        print("Position: {}, {}, or {};".format(pos_x, pos_y, orientation), end="    ")
-        print("Left {}, front {}, right {};".format(left, front, right), end="    ")
-        print("north {}, west {}, south {}, east {}".format(north, west, south, east))
+        # print("Position: {}, {}, or {};".format(pos_x, pos_y, orientation), end="    ")
+        # print("Left {}, front {}, right {};".format(left, front, right), end="    ")
+        # print("north {}, west {}, south {}, east {}".format(north, west, south, east))
         if east:
             cell_byte = cell_byte + 2
         if south:
@@ -229,13 +229,13 @@ Functions to change robots orientation and position
 
 def turn(orientation, turn_dir):
     if turn_dir == "right":
-        print("is turning right")
+        # print("is turning right")
         if orientation != 4:
             return orientation + 1
         else:
             return 1
     elif turn_dir == "left":
-        print("is turning left")
+        # print("is turning left")
         if orientation != 1:
             return orientation - 1
         else:
