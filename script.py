@@ -3,6 +3,8 @@ import struct
 import zmq
 import operator
 
+# import time
+
 
 # establish the connection
 ctx = zmq.Context()
@@ -184,15 +186,15 @@ def get_cell_weight(pos_x, pos_y, orientation):
     # if west
     if orientation == 4:
         weight_on_left = (
-            numbers[cell_position_to_number(pos_x, pos_y + 1)]
+            numbers[cell_position_to_number(pos_x, pos_y - 1)]
             if pos_y != 15
             else 100000
         )
         weight_on_front = (
-            numbers[cell_position_to_number(pos_x, pos_y + 1)] if pos_x != 0 else 100000
+            numbers[cell_position_to_number(pos_x - 1, pos_y)] if pos_x != 0 else 100000
         )
         weight_on_right = (
-            numbers[cell_position_to_number(pos_x + 1, pos_y)]
+            numbers[cell_position_to_number(pos_x, pos_y + 1)]
             if pos_x != 15
             else 100000
         )
@@ -260,7 +262,7 @@ update_state(pos_x, pos_y, orientation)
 # test_labirynth(1)
 
 k = 0
-while not are_all_cells_visited() and k != 800:
+while not are_all_cells_visited() and k != 1800:
 
     write_cell_walls(pos_x, pos_y, orientation)
     update_state(pos_x, pos_y, orientation)
@@ -268,6 +270,7 @@ while not are_all_cells_visited() and k != 800:
     are_there_walls = read_walls(pos_x, pos_y, orientation)
 
     weights = get_cell_weight(pos_x, pos_y, orientation)
+    print(weights)
 
     orientation = choose_where_to_turn(orientation, weights, are_there_walls)
     # update_state(pos_x, pos_y, orientation)
@@ -275,11 +278,12 @@ while not are_all_cells_visited() and k != 800:
     pos_x, pos_y = move(pos_x, pos_y, orientation)
     update_state(pos_x, pos_y, orientation)
     k = k + 1
+    # time.sleep(0.1)
     print(k)
 
 
 if are_all_cells_visited():
-    print("The robot has visited the whole labirynth")
+    print("The robot has visited the whole labirynth in {} moves".format(k))
 else:
     print("It is getting too long")
 
